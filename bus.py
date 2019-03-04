@@ -23,11 +23,18 @@ class Bus:
     
     
     def addArretsAller(self,dates):
+        '''
+           Ajoute les arrets aller à l'aide de l'horaire du bus 
+        '''
         for i in range(len(dates)):
             arret = Arret(dates[i][0])
             self.setArretAller(arret)
+
     
     def addArretsRetour(self,dates):
+        '''
+           Ajoute les arrets aller à l'aide de l'horaire du bus 
+        '''
         for i in range(len(dates)):
             arret = Arret(dates[i][0])
             self.setArretRetour(arret)
@@ -42,9 +49,4 @@ class Bus:
                 return True
             if self.arrets_aller[i]==arrivee:  #l'arrivee arrive en premier, donc on retourne false qui correspond au sens retour
                 return False
-
-
-
-if __name__ == "__main__" :
-    bus=Bus(2,['fre','buik'])
-    print(bus.sens('buik','fre'))       
+    

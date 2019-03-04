@@ -6,17 +6,15 @@ Created on Thu Jan 24 08:51:21 2019
 """
 
 
-from bus import Bus
-from arret import Arret
 from arc import Arc
 import math
 
 
 
 class Reseau:
-    def __init__(self, bus=[], arrets=[], arcs=[], arcs_ponderes=[]):
+    def __init__(self, bus=[], arrets=[], arcs=[]):
         self.bus=bus
-        self.arrets=arrets
+        self.arrets=arrets # liste qui contient des objets Arrets
         self.arcs=arcs    # liste qui contient des objets Arc
 
 
@@ -27,6 +25,9 @@ class Reseau:
     
     
     def setBus(self, bus):  #bus= obj bus
+        '''
+           Rajoute un bus au reseau 
+        '''
         self.bus.append(bus)
         self.setArrets(bus)
         self.setArcs(bus)
@@ -34,33 +35,57 @@ class Reseau:
     
     
     def setArrets(self, bus):
+        '''
+           Rajoute tous les arrets correspondants à un bus (et évite les doublons) 
+        '''
         liste_arrets=bus.arrets_aller+bus.arrets_retour
         for a in liste_arrets:
             if self.is_not_inbis(a,self.getArrets())==1:
                 self.arrets.append(a)
  
        
-    def setArcs(self, bus):        
+    def setArcs(self, bus): 
+        '''
+           Crée et ajoute tous les arcs correspondants à un bus (et évite les doublons) 
+        '''
         liste_arrets=bus.arrets_aller+bus.arrets_retour
         for i in range(len(liste_arrets)-1):
             unArc=Arc(liste_arrets[i], liste_arrets[i+1])
             
             if self.is_not_in(unArc,self.arcs)==1:
                 self.arcs.append(unArc)
+                
 
     def setTempsArcs(self, date):
+        '''
+            Met à jour les temps correspondants à chaque arc à l'aide d'une liste d'horraires
+        '''
         for i in range(len(date)-1):
             a=1
-            while date[i][a] == "-" or date[i+1][a] == "-" :
+            while (date[i][a] == "-" or date[i+1][a] == "-") and a<len(date[i])-2:
                 a=a+1
-            temps = (int(date[i+1][a][0])*60+int(date[i+1][a][2:])) - (int(date[i][a][0])*60+int(date[i][a][2:]))
+            if a<=len(date[i])-3:
+                temps = (int(date[i+1][a][0])*60+int(date[i+1][a][2:])) - (int(date[i][a][0])*60+int(date[i][a][2:]))
             
-            for a in self.arcs:
-                if a.arret_dep.nom == date[i][0] and a.arret_arr.nom == date[i+1][0]:
-                    a.setTemps(temps)
+                for a in self.arcs:
+                    if a.arret_dep.nom == date[i][0] and a.arret_arr.nom == date[i+1][0]:
+                        a.setTemps(temps)
+    
+    def deleteArcs(self):
+        '''
+            Supprime les arcs construits qui ne sont finalement pas liés directement par un bus (le temps de l'arc est None)
+        '''
+        arcs = []
+        for i in range(len(self.arcs)):
+            if self.arcs[i].temps!=None:
+                arcs.append(self.arcs[i])
+        return arcs
 
     
-    def is_not_in(self,elem, liste):   #retourne 1 si l'element n'est pas dans la liste et 0 sinon
+    def is_not_in(self,elem, liste): 
+        '''
+            Sert à dire si un élément se trouve dans une liste : retourne 1 si l'element n'est pas dans la liste et 0 sinon
+        '''
         if len(liste)==0:
             return 1
         if len(liste)==1:
@@ -73,8 +98,13 @@ class Reseau:
         
         return 1* self.is_not_in(elem,liste[1:])
     
+    # if not elem in liste:
     
-    def is_not_inbis(self,ar,listeArrets):  #retourne 1 si l'element n'est pas dans la liste et 0 sinon
+    def is_not_inbis(self,ar,listeArrets):
+        '''
+            Sert à dire si un élément se trouve dans une liste : retourne 1 si l'element n'est pas dans la liste et 0 sinon
+            Fonctionne uniquement avec des objets arrets
+        '''
         for arret in listeArrets:
             if arret.nom == ar.nom:
                 return 0
@@ -82,16 +112,19 @@ class Reseau:
    
     
     def shortest(self,dep,arr,chemins_possibles):
+        '''
+           Retourne le chemin le plus court (entre deux points) parmi une liste de chemins possibles
+        '''
         if len(chemins_possibles) != 0:
-            for ch in chemins_possibles:
-                if ch[-1] == arr:
+            for ch in chemins_possibles: #parcourre les chemins possibles
+                if ch[-1] == arr: # condition d'arret : la liste d'un chemin possible se finit par l'arret recherché
                     return ch
         
         if len(chemins_possibles) == 0:
             chemins_possibles.append([dep])
             
         new_chemins_possibles=[]
-        for ch in chemins_possibles:
+        for ch in chemins_possibles: # parcourre les chemins, et y ajoute des arrets possibles
             new_dep = ch[-1]
             for a in self.arcs:
                 if a.arret_dep.nom == new_dep:
@@ -102,11 +135,15 @@ class Reseau:
     
     
     def fastest(self,dep,arr):
+        '''
+           Retourne le chemin le plus rapide (par rapport au temps des arcs) entre 2 arrets 
+        '''
         temps = self.dijkstra(dep,arr)
         chemin = [arr]
         tChemin = 0
         courant = None
         
+        # on reconstruit la liste du chemin (depuis l'arrivee jusqu'au depart), grace a la liste des temps obtenue avec Dijkstra
         for t in temps:
             if t[0] == arr:
                 tChemin = t[1]
@@ -127,6 +164,9 @@ class Reseau:
     
     
     def dijkstra(self,dep,arr):
+        '''
+           Retourne une liste de temps correspondants aux temps les plus petits pour aller du depart a l'arrivee 
+        '''
         nav = self.remove(self.getArrets(),dep)
         temps = self.makeListTemps(dep)
         courant = dep
@@ -141,6 +181,9 @@ class Reseau:
 
 
     def remove(self, liste, arret):
+        '''
+           Supprime un arret d'une liste d'arrets 
+        '''
         for i in range(len(liste)):
             if liste[i].nom == arret:
                 return liste[:i]+ liste[i+1:]
@@ -149,6 +192,9 @@ class Reseau:
     
     
     def makeListTemps(self,dep):
+        '''
+            Construit une liste de temps par rapport à un arret de depart
+        '''
         temps = [[dep,0,dep]]
         
         for i in range(len(self.getArrets())):
@@ -165,6 +211,10 @@ class Reseau:
     
                 
     def sont_voisins(self,n1,n2):
+        '''
+           Determine si deux arrets sont voisins
+           Si c'est le cas, retourne aussi le temps entre eux
+        '''
         for a in self.arcs:
             if a.arret_dep.nom==n1 and a.arret_arr.nom==n2:
                 return True,a.temps
@@ -175,6 +225,9 @@ class Reseau:
     
     
     def majTemps(self,listeTemps, noeud):
+        '''
+           Met à jour la liste des temps par rapport à un noeud 
+        '''
         liste = []
         for time in listeTemps:
             if time[2] == None:
@@ -199,8 +252,12 @@ class Reseau:
     
     
     def getNewCourant(self, listeNoeuds, listeTemps):
+        '''
+            Retourne un nouveau noeud courant parmi une liste de noeuds restants
+        '''
         min = math.inf
-        noeud = 'oo'
+        noeud = 'oo' #noeud quelconque
+        # on cherche le noeud dans la listeTemps ayant le temps le plus petit
         for a in listeNoeuds:
             for temps in listeTemps:
                 if temps[0] == a.nom and temps[1]<min:
@@ -208,16 +265,3 @@ class Reseau:
                     noeud = a.nom
         return noeud
                 
-            
-
-        
-
-
-if __name__ == "__main__" :
-
-    res=Reseau()
-    
-    
-
-      
-        
